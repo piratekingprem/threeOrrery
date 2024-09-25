@@ -4,16 +4,17 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, Stars } from "@react-three/drei";
 import { Vector3, CatmullRomCurve3 } from "three";
 
+// Sun Component
 function Sun({ onClick }) {
   return (
     <mesh onClick={(event) => onClick(event.object)}>
-      {/* Scaled size of Sun relative to planets */}
-      <sphereGeometry args={[6.96, 32, 32]} /> {/* Approximate scaling */}
+      <sphereGeometry args={[6.96, 32, 32]} />
       <meshBasicMaterial color="gold" />
     </mesh>
   );
 }
 
+// Planet Component
 function Planet({
   radius,
   widthSegment,
@@ -42,6 +43,7 @@ function Planet({
   );
 }
 
+// OrbitPath Component
 function OrbitPath({ semiMajorAxis, semiMinorAxis }) {
   const points = [];
   for (let i = 0; i < 360; i++) {
@@ -69,6 +71,25 @@ function OrbitPath({ semiMajorAxis, semiMinorAxis }) {
   );
 }
 
+// Asteroid Component
+function Asteroid({ semiMajorAxis, semiMinorAxis, size, orbitSpeed, startOffset }) {
+  const asteroidRef = useRef();
+
+  useFrame(({ clock }) => {
+    const elapsedTime = clock.getElapsedTime();
+    const angle = startOffset + elapsedTime * orbitSpeed;
+    asteroidRef.current.position.x = semiMajorAxis * Math.cos(angle);
+    asteroidRef.current.position.z = semiMinorAxis * Math.sin(angle);
+  });
+
+  return (
+    <mesh ref={asteroidRef}>
+      <sphereGeometry args={[size, 16, 16]} />
+      <meshStandardMaterial color="darkgray" />
+    </mesh>
+  );
+}
+
 function Scene() {
   const { camera } = useThree();
   const controlsRef = useRef();
@@ -82,7 +103,7 @@ function Scene() {
     }
   };
 
-  // Define start offsets for each planet (in radians, estimated)
+  // Define start offsets for each planet (in radians)
   const startOffsets = {
     mercury: Math.PI / 4,
     venus: Math.PI / 2,
@@ -101,7 +122,7 @@ function Scene() {
 
       <Sun onClick={handleZoomIn} />
 
-      {/* Mercury */}
+      {/* Planets */}
       <OrbitPath semiMajorAxis={4.87} semiMinorAxis={4.79} />
       <Planet
         radius={0.49}
@@ -146,14 +167,14 @@ function Scene() {
       {/* Mars */}
       <OrbitPath semiMajorAxis={22.79} semiMinorAxis={22.64} />
       <Planet
-        radius={0.1} // Correct scaling for Jupiter relative to the Sun
+        radius={0.68}
         widthSegment={32}
         heightSegment={32}
-        color="orange"
-        semiMajorAxis={77.92}
-        semiMinorAxis={77.57}
-        orbitSpeed={1 / 4333}
-        startOffset={startOffsets.jupiter}
+        color="red"
+        semiMajorAxis={22.79}
+        semiMinorAxis={22.64}
+        orbitSpeed={1 / 687}
+        startOffset={startOffsets.mars}
         onClick={handleZoomIn}
       />
 
@@ -213,6 +234,23 @@ function Scene() {
         onClick={handleZoomIn}
       />
 
+      {/* Two Asteroids */}
+      <Asteroid
+        semiMajorAxis={17} // Near Earth's orbit
+        semiMinorAxis={16.5}
+        size={0.2}
+        orbitSpeed={1 / 300} // Faster orbit speed
+        startOffset={Math.PI / 3}
+      />
+
+      <Asteroid
+        semiMajorAxis={60} // Between Mars and Jupiter
+        semiMinorAxis={59.5}
+        size={0.3}
+        orbitSpeed={1 / 1000}
+        startOffset={Math.PI / 5}
+      />
+
       <OrbitControls ref={controlsRef} />
       <Stars
         radius={200}
@@ -231,7 +269,7 @@ export default function Orrery() {
   return (
     <div style={{ height: "100vh" }}>
       <Canvas
-        camera={{ position: [0, 50, 120], fov: 45, near: 0.1, far: 2000 }} // Increase the far value
+        camera={{ position: [0, 50, 120], fov: 45, near: 0.1, far: 2000 }}
         style={{ background: "black" }}
       >
         <Scene />
