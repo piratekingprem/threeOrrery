@@ -1,10 +1,12 @@
 // src/Orrery.js
-import React, { useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, Stars } from "@react-three/drei";
 import { Vector3, CatmullRomCurve3 } from "three";
-
+import axios from 'axios';
 // Sun Component
+
+
 function Sun({ onClick }) {
   return (
     <mesh onClick={(event) => onClick(event.object)}>
@@ -69,6 +71,13 @@ function OrbitPath({ semiMajorAxis, semiMinorAxis }) {
       <pointsMaterial size={0.05} color="white" />
     </points>
   );
+}
+
+// neo data
+const neoData = async () => {
+  const api_key = `8Cre6l1RZJ7lsmyab3tAtbDwPvCLiJVXidkjmXby#`
+  const data = await axios.get(`https://api.nasa.gov/neo/rest/v1/feed?api_key=${api_key}`)
+  console.log(data)
 }
 
 // Asteroid Component
@@ -244,7 +253,7 @@ function Scene() {
       />
 
       <Asteroid
-        semiMajorAxis={60} // Between Mars and Jupiter
+        semiMajorAxis={60} 
         semiMinorAxis={59.5}
         size={0.3}
         orbitSpeed={1 / 1000}
@@ -266,6 +275,9 @@ function Scene() {
 }
 
 export default function Orrery() {
+  useEffect(()=>{
+    neoData()
+  })
   return (
     <div style={{ height: "100vh" }}>
       <Canvas
