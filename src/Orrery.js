@@ -1,12 +1,10 @@
 // src/Orrery.js
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, Stars } from "@react-three/drei";
 import { Vector3, CatmullRomCurve3 } from "three";
-import axios from 'axios';
+
 // Sun Component
-
-
 function Sun({ onClick }) {
   return (
     <mesh onClick={(event) => onClick(event.object)}>
@@ -73,33 +71,18 @@ function OrbitPath({ semiMajorAxis, semiMinorAxis }) {
   );
 }
 
-// neo data
-const neoData = async () => {
-  const api_key = `8Cre6l1RZJ7lsmyab3tAtbDwPvCLiJVXidkjmXby#`
-  const data = await axios.get(`https://api.nasa.gov/neo/rest/v1/feed?api_key=${api_key}`)
-  console.log(data)
-}
 
 // Asteroid Component
-function Asteroid({ semiMajorAxis, semiMinorAxis, size, orbitSpeed, startOffset }) {
-  const asteroidRef = useRef();
-
-  useFrame(({ clock }) => {
-    const elapsedTime = clock.getElapsedTime();
-    const angle = startOffset + elapsedTime * orbitSpeed;
-    asteroidRef.current.position.x = semiMajorAxis * Math.cos(angle);
-    asteroidRef.current.position.z = semiMinorAxis * Math.sin(angle);
-  });
-
+function Asteroid({ position, size }) {
   return (
-    <mesh ref={asteroidRef}>
-      <sphereGeometry args={[size, 16, 16]} />
-      <meshStandardMaterial color="darkgray" />
+    <mesh position={position}>
+      <sphereGeometry args={[size, 160, 160]} />
+      <meshStandardMaterial color="red" />
     </mesh>
   );
 }
 
-function Scene() {
+function Scene({ neoData }) {
   const { camera } = useThree();
   const controlsRef = useRef();
 
@@ -244,21 +227,23 @@ function Scene() {
       />
 
       {/* Two Asteroids */}
-      <Asteroid
-        semiMajorAxis={17} // Near Earth's orbit
-        semiMinorAxis={16.5}
-        size={0.2}
-        orbitSpeed={1 / 300} // Faster orbit speed
-        startOffset={Math.PI / 3}
-      />
+       {/* Render Asteroids based on NEO data */}
+       {neoData && Object.values(neoData.near_earth_objects).flat().map((neo) => {
+        const diameter =
+          neo.estimated_diameter.kilometers.estimated_diameter_max;
+        const distance = neo.close_approach_data[0].miss_distance.astronomical;
 
-      <Asteroid
-        semiMajorAxis={60} 
-        semiMinorAxis={59.5}
-        size={0.3}
-        orbitSpeed={1 / 1000}
-        startOffset={Math.PI / 5}
-      />
+        // Calculate position based on miss distance (in AU)
+        const position = new Vector3(distance, Math.random()*100, Math.random()*200a); // Simple placement for demonstration
+        const size = diameter / 100; // Convert kilometers to meters for size
+
+        return (
+          <>
+          {console.log(position)}
+          <Asteroid key={neo.id} position={position} size={size} />
+          </>
+        );
+      })}
 
       <OrbitControls ref={controlsRef} />
       <Stars
@@ -275,16 +260,26 @@ function Scene() {
 }
 
 export default function Orrery() {
-  useEffect(()=>{
-    neoData()
-  })
+  const [neoData, setNEOData] = useState(null);
+  const api_key = "8Cre6l1RZJ7lsmyab3tAtbDwPvCLiJVXidkjmXby";
+
+  useEffect(() => {
+    fetch(
+      `http://api.nasa.gov/neo/rest/v1/feed?start_date=2024-09-25&end_date=2024-09-25&api_key=${api_key}`
+    )
+      .then((response) => response.json())
+      .then((data) => {
+        setNEOData(data);
+      });
+  }, []);
+
   return (
     <div style={{ height: "100vh" }}>
       <Canvas
         camera={{ position: [0, 50, 120], fov: 45, near: 0.1, far: 2000 }}
         style={{ background: "black" }}
       >
-        <Scene />
+        <Scene neoData={neoData} />
       </Canvas>
     </div>
   );
