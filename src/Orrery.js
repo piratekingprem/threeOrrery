@@ -41,6 +41,23 @@ const Sun = () => (
   </mesh>
 );
 
+// Orbit Path component to show circular paths around the Sun
+const OrbitPath = ({ distance }) => {
+  const points = [];
+  for (let i = 0; i < 64; i++) {
+    const angle = (i / 64) * Math.PI * 2;
+    points.push(new THREE.Vector3(Math.cos(angle) * distance, 0, Math.sin(angle) * distance));
+  }
+  const lineGeometry = new THREE.BufferGeometry().setFromPoints(points);
+
+  return (
+    <line>
+      <bufferGeometry attach="geometry" {...lineGeometry} />
+      <lineBasicMaterial attach="material" color="white" />
+    </line>
+  );
+};
+
 // Planet component with animation using useFrame
 const Planet = ({ name, color, distance, size, speed }) => {
   const ref = useRef();
@@ -99,6 +116,10 @@ const Orrery = () => {
     { name: 'Venus', color: 'yellow', distance: 30, size: 1.5, speed: 0.02 },
     { name: 'Earth', color: 'blue', distance: 40, size: 2, speed: 0.01 },
     { name: 'Mars', color: 'red', distance: 50, size: 1.7, speed: 0.008 },
+    { name: 'Jupiter', color: 'orange', distance: 70, size: 3, speed: 0.005 },
+    { name: 'Saturn', color: 'goldenrod', distance: 90, size: 2.8, speed: 0.004 },
+    { name: 'Uranus', color: 'lightblue', distance: 110, size: 2.5, speed: 0.003 },
+    { name: 'Neptune', color: 'darkblue', distance: 130, size: 2.4, speed: 0.002 },
   ];
 
   // Fetch NEO data from the NASA API
@@ -106,14 +127,14 @@ const Orrery = () => {
     const fetchNEOData = async () => {
       try {
         const response = await fetch(
-          `https://api.nasa.gov/neo/rest/v1/feed?start_date=2024-09-22&end_date=2024-09-23&api_key=ew5wSSkycJDyRhyeznBX6JkaRTRWmImwioGODrTA`
+          `https://api.nasa.gov/neo/rest/v1/api_key=ew5wSSkycJDyRhyeznBX6JkaRTRWmImwioGODrTA`
         );
         const data = await response.json();
         const neos = data.near_earth_objects['2024-09-22']; // Adjust based on available dates
 
         const formattedNEOs = neos.map((neo) => ({
           name: neo.name,
-          size: neo.estimated_diameter.kilometers.estimated_diameter_max,
+          size: neo.estimated_diameter.kilometers.estimated_diameter_max / 10, // scale for visualization
           color: 'red', // You can dynamically assign colors based on other parameters
           distance: Math.random() * 100 + 60, // Random distance for demonstration
           speed: Math.random() * 0.01 + 0.005, // Random speed for demonstration
@@ -131,7 +152,7 @@ const Orrery = () => {
   return (
     <>
       <Canvas
-        camera={{ position: [0, 50, 100], fov: 75 }}
+        camera={{ position: [0, 100, 150], fov: 75 }}
         style={{ background: 'black', height: '100vh', width: '100vw' }} // Full-screen black background
       >
         <ambientLight intensity={0.5} />
@@ -140,13 +161,15 @@ const Orrery = () => {
         <Stars />
         <Sun />
 
-        {/* Render each planet */}
+        {/* Render orbits for each planet */}
         {planets.map((planet) => (
-          <Planet
-            key={planet.name}
-            {...planet}
-            onClick={() => setSelectedPlanet(planet.name)}
-          />
+          <React.Fragment key={planet.name}>
+            <OrbitPath distance={planet.distance} />
+            <Planet
+              {...planet}
+              onClick={() => setSelectedPlanet(planet.name)}
+            />
+          </React.Fragment>
         ))}
 
         {/* Render NEOs dynamically from API */}
