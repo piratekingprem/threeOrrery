@@ -4,7 +4,7 @@ import { Canvas, useThree, useFrame } from "@react-three/fiber";
 import { OrbitControls, Html } from "@react-three/drei";
 import { Vector3 } from "three";
 import './Orrey.css';
-import * as THREE from 'three'; 
+import * as THREE from 'three';
 
 // Stars Component
 const Stars = () => {
@@ -32,19 +32,8 @@ const Stars = () => {
   );
 };
 
-// Sun Component
-const Sun = () => (
-  <mesh position={[0, 0, 0]}>
-    <sphereGeometry args={[5, 32, 32]} />
-    <meshStandardMaterial emissive="yellow" color="yellow" />
-    <Html position={[0, 6, 0]}>
-      <div style={{ color: 'white', fontSize: '1.5em' }}>Sun</div>
-    </Html>
-  </mesh>
-);
-
 // OrbitPath Component
-const OrbitPath = ({ distance }) => {
+const OrbitPath = ({ distance, onClick }) => {
   const points = [];
   for (let i = 0; i < 64; i++) {
     const angle = (i / 64) * Math.PI * 2;
@@ -53,21 +42,21 @@ const OrbitPath = ({ distance }) => {
   const lineGeometry = new THREE.BufferGeometry().setFromPoints(points);
 
   return (
-    <line>
+    <line onClick={onClick}>
       <bufferGeometry attach="geometry" {...lineGeometry} />
       <lineBasicMaterial attach="material" color="white" />
     </line>
   );
 };
 
-// Planet Component
-const Planet = ({ name, color, distance, size, speed, onClick }) => {
+// Planet & NEO Dot Component
+const Dot = ({ name, color, distance, size, speed, onClick }) => {
   const ref = useRef();
   const angle = useRef(Math.random() * Math.PI * 2);
 
   useFrame((state, delta) => {
     if (ref.current) {
-      angle.current += delta * speed;
+      angle.current += delta * speed; // Dot's orbit speed
       ref.current.position.x = distance * Math.cos(angle.current);
       ref.current.position.z = distance * Math.sin(angle.current);
     }
@@ -78,41 +67,19 @@ const Planet = ({ name, color, distance, size, speed, onClick }) => {
       <sphereGeometry args={[size, 32, 32]} />
       <meshStandardMaterial color={color} />
       <Html position={[0, size + 2, 0]}>
-        <div style={{ color: 'white', fontSize: '1em' }}>{name}</div>
+        <div style={{ color: 'white', fontSize: '1em', cursor: 'pointer' }} onClick={onClick}>
+          {name}
+        </div>
       </Html>
     </mesh>
   );
 };
 
-// NEO (Near-Earth Object) Component
-const NeoObject = ({ name, color, size, distance, speed }) => {
-  const ref = useRef();
-  const angle = useRef(Math.random() * Math.PI * 2);
-
-  useFrame((state, delta) => {
-    if (ref.current) {
-      angle.current += delta * speed;
-      ref.current.position.x = distance * Math.cos(angle.current);
-      ref.current.position.z = distance * Math.sin(angle.current);
-    }
-  });
-
-  return (
-    <mesh ref={ref}>
-      <sphereGeometry args={[size, 32, 32]} />
-      <meshStandardMaterial color={color} />
-      <Html position={[0, size + 2, 0]}>
-        <div style={{ color: 'white', fontSize: '0.8em' }}>{name}</div>
-      </Html>
-    </mesh>
-  );
-};
-
-// Main Orrery Scene Component
+// Main Scene Component
 const Scene = ({ neoData }) => {
   const { camera } = useThree();
   const controlsRef = useRef();
-  const [selectedPlanet, setSelectedPlanet] = useState(null);
+  const [selectedObject, setSelectedObject] = useState(null);
 
   const planets = [
     { name: 'Mercury', color: 'gray', distance: 20, size: 0.5, speed: 0.03 },
@@ -125,11 +92,8 @@ const Scene = ({ neoData }) => {
     { name: 'Neptune', color: 'darkblue', distance: 130, size: 0.5, speed: 0.002 },
   ];
 
-  const handleZoomIn = (object) => {
-    const offset = new Vector3(2, 2, 2);
-    controlsRef.current.target.copy(object.position);
-    camera.position.copy(object.position).add(offset);
-    camera.lookAt(object.position);
+  const handleObjectClick = (object) => {
+    setSelectedObject(object);
   };
 
   return (
@@ -138,46 +102,46 @@ const Scene = ({ neoData }) => {
       <pointLight position={[0, 0, 0]} intensity={1} />
 
       <Stars />
-      <Sun />
+      <Dot name="Sun" color="yellow" distance={0} size={5} speed={0} />
 
       {planets.map((planet) => (
         <React.Fragment key={planet.name}>
           <OrbitPath distance={planet.distance} />
-          <Planet
-            {...planet}
-            onClick={() => setSelectedPlanet(planet.name)}
-          />
+          <Dot {...planet} onClick={() => handleObjectClick(planet)} />
         </React.Fragment>
       ))}
 
-      {neoData &&
-        neoData.map((neo, idx) => (
-          <NeoObject key={idx} {...neo} />
-        ))}
+      {neoData.map((neo, idx) => (
+        <React.Fragment key={idx}>
+          <OrbitPath distance={neo.distance} />
+          <Dot {...neo} onClick={() => handleObjectClick(neo)} />
+        </React.Fragment>
+      ))}
 
       <OrbitControls ref={controlsRef} />
     </>
   );
 };
 
-// Orrery Component (Main)
+// Orrery Component
 export default function Orrery() {
   const [neoData, setNeoData] = useState([]);
-  console.log(neoData)
+  const api_key = "8Cre6l1RZJ7lsmyab3tAtbDwPvCLiJVXidkjmXby#"
   useEffect(() => {
     const fetchNeoData = async () => {
       try {
-        const response = await fetch(
-          "https://api.nasa.gov/neo/rest/v1/feed?start_date=2024-09-25&end_date=2024-09-25&api_key=8Cre6l1RZJ7lsmyab3tAtbDwPvCLiJVXidkjmXby"
-        );
+        const response = await fetch("https://api.nasa.gov/neo/rest/v1/feed?start_date=2024-09-25&end_date=2024-09-25&api_key=YOUR_API_KEY");
         const data = await response.json();
+        const neos = data.near_earth_objects['2024-09-25'];
 
-        const formattedNEOs = data.near_earth_objects['2024-09-25'].map((neo) => ({
+        const formattedNEOs = neos.map((neo) => ({
           name: neo.name,
           size: neo.estimated_diameter.kilometers.estimated_diameter_max / 10,
           color: 'red',
-          distance: Math.random() * 100 + 60, // Placeholder random value for visualization
+          distance: Math.random() * 100 + 60, // Random distance for now
           speed: Math.random() * 0.01 + 0.005,
+          info: `Diameter: ${neo.estimated_diameter.kilometers.estimated_diameter_max} km, 
+                 Velocity: ${neo.close_approach_data[0].relative_velocity.kilometers_per_hour} km/h`,
         }));
 
         setNeoData(formattedNEOs);
