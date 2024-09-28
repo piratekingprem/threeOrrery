@@ -11,10 +11,17 @@ const Stars = () => {
   const group = useRef();
   const [positions] = useState(() => {
     const temp = [];
+
     for (let i = 0; i < 1000; i++) {
       const x = Math.random() * 2000 - 1000;
       const y = Math.random() * 2000 - 1000;
       const z = Math.random() * 2000 - 1000;
+
+    for (let i = 0; i < 15000; i++) {
+      const x = THREE.MathUtils.randFloatSpread(2000);
+      const y = THREE.MathUtils.randFloatSpread(2000);
+      const z = THREE.MathUtils.randFloatSpread(2000);
+
       temp.push([x, y, z]);
     }
     return temp;
@@ -92,14 +99,14 @@ const Orrery = () => {
   const [neoData, setNeoData] = useState([]);
 
   const planets = [
-    { name: 'Mercury', color: 'gray', distance: 20, size: 0.2, speed: 0.03 },
-    { name: 'Venus', color: 'yellow', distance: 30, size: 0.3, speed: 0.02 },
-    { name: 'Earth', color: 'blue', distance: 40, size: 0.35, speed: 0.01 },
-    { name: 'Mars', color: 'red', distance: 50, size: 0.25, speed: 0.008 },
-    { name: 'Jupiter', color: 'orange', distance: 70, size: 0.45, speed: 0.005 },
-    { name: 'Saturn', color: 'goldenrod', distance: 90, size: 0.4, speed: 0.004 },
-    { name: 'Uranus', color: 'lightblue', distance: 110, size: 0.35, speed: 0.003 },
-    { name: 'Neptune', color: 'darkblue', distance: 130, size: 0.35, speed: 0.002 },
+    { name: 'Mercury', color: 'gray', distance: 0.3 * 10, size: 0.2, speed: 0.03 },
+    { name: 'Venus', color: 'yellow', distance:0.72 * 10, size: 0.2, speed: 0.02 },
+    { name: 'Earth', color: 'blue', distance: 1 * 10, size: 0.2, speed: 0.01 },
+    { name: 'Mars', color: 'red', distance: 1.5 * 10, size: 0.2, speed: 0.008 },
+    { name: 'Jupiter', color: 'orange', distance:  5.2 * 10, size: 0.2, speed: 0.005 },
+    { name: 'Saturn', color: 'goldenrod', distance: 9.5 * 10, size: 0.2, speed: 0.004 },
+    { name: 'Uranus', color: 'lightblue', distance: 19.2 * 10, size: 0.2, speed: 0.003 },
+    { name: 'Neptune', color: 'darkblue', distance: 30 * 10, size: 0.2, speed: 0.002 },
   ];
 
   const handleObjectClick = (object) => {
@@ -176,12 +183,20 @@ const Orrery = () => {
             </React.Fragment>
           ))}
 
-          {/* Render NEOs dynamically from API */}
+          {/* Render NEOs without orbit paths */}
           {neoData.map((neo, idx) => (
+
             <React.Fragment key={idx}>
               <OrbitPath distance={neo.distance} onClick={() => handleObjectClick(neo)} />
               <Dot {...neo} onClick={() => handleObjectClick(neo)} />
             </React.Fragment>
+
+            <Dot
+              key={idx}
+              {...neo}
+              onClick={() => handleObjectClick(neo)}
+            />
+
           ))}
 
           <OrbitControls />
