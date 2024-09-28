@@ -1,10 +1,11 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, Html } from '@react-three/drei';
 import * as THREE from 'three';
+import * as handpose from '@tensorflow-models/handpose';
+import '@tensorflow/tfjs';
 import './Orrey.css';
 
-// Utility to generate random stars in the background
 const Stars = () => {
   const group = useRef();
   const [positions] = useState(() => {
@@ -30,7 +31,6 @@ const Stars = () => {
   );
 };
 
-// Orbit Path component to show circular paths around the Sun
 const OrbitPath = ({ distance, onClick }) => {
   const points = [];
   for (let i = 0; i < 64; i++) {
@@ -47,14 +47,13 @@ const OrbitPath = ({ distance, onClick }) => {
   );
 };
 
-// Dot to represent planets/NEOs
 const Dot = ({ name, color, distance, size, speed, onClick }) => {
   const ref = useRef();
   const angle = useRef(Math.random() * Math.PI * 2);
 
   useFrame((state, delta) => {
     if (ref.current) {
-      angle.current += delta * speed; // Dot's orbit speed
+      angle.current += delta * speed;
       ref.current.position.x = distance * Math.cos(angle.current);
       ref.current.position.z = distance * Math.sin(angle.current);
     }
@@ -73,7 +72,6 @@ const Dot = ({ name, color, distance, size, speed, onClick }) => {
   );
 };
 
-// Sun component in the center of the orrery
 const Sun = () => {
   return (
     <mesh>
@@ -83,11 +81,26 @@ const Sun = () => {
   );
 };
 
-// Main Orrery Scene component
+// ZoomController that controls camera zoom based on hand distance
+const ZoomController = ({ zoomLevel }) => {
+  const { camera } = useThree();
+
+  useEffect(() => {
+    camera.position.z = zoomLevel;
+  }, [zoomLevel, camera]);
+
+  return null;
+};
+
 const Orrery = () => {
   const [selectedObject, setSelectedObject] = useState(null);
-  const [showPanel, setShowPanel] = useState(false); // Controls visibility of the information panel
+  const [showPanel, setShowPanel] = useState(false);
   const [neoData, setNeoData] = useState([]);
+  const [zoomLevel, setZoomLevel] = useState(100); // Initialize zoom level
+  const [handPoseDetectionStarted, setHandPoseDetectionStarted] = useState(false); // State to track if handpose detection has started
+
+  const videoRef = useRef(null);
+  let model = null;
 
   const planets = [
     { name: 'Mercury', color: 'gray', distance: 20, size: 0.2, speed: 0.03 },
@@ -112,7 +125,7 @@ const Orrery = () => {
 
         const formattedNEOs = neos.map((neo) => ({
           name: neo.name,
-          size: 0.2, // Set a small dot size
+          size: 0.2,
           color: 'red',
           distance: Math.random() * 100 + 60,
           speed: Math.random() * 0.01 + 0.005,
@@ -131,12 +144,56 @@ const Orrery = () => {
 
   const handleObjectClick = (object) => {
     setSelectedObject(object);
-    setShowPanel(true); // Show the information panel when a planet or NEO is clicked
+    setShowPanel(true);
+  };
+
+  // Load Handpose Model and Setup Camera for Hand Tracking
+  const loadHandposeModel = async () => {
+    model = await handpose.load();
+    detectHand();
+  };
+
+  const detectHand = async () => {
+    const video = videoRef.current;
+    const predictions = await model.estimateHands(video);
+
+    if (predictions.length > 0) {
+      const landmarks = predictions[0].landmarks;
+      const thumbTip = landmarks[4];
+      const indexTip = landmarks[8];
+
+      const distance = Math.sqrt(
+        Math.pow(thumbTip[0] - indexTip[0], 2) +
+        Math.pow(thumbTip[1] - indexTip[1], 2) +
+        Math.pow(thumbTip[2] - indexTip[2], 2)
+      );
+
+      controlZoom(distance);
+    }
+
+    requestAnimationFrame(detectHand);
+  };
+
+  const controlZoom = (distance) => {
+    if (distance < 50) {
+      setZoomLevel((prev) => Math.max(prev - 1, 10)); // Zoom in
+    } else if (distance > 100) {
+      setZoomLevel((prev) => Math.min(prev + 1, 200)); // Zoom out
+    }
+  };
+
+  // Setup Camera and Load Handpose Model after button click
+  const startHandposeDetection = async () => {
+    setHandPoseDetectionStarted(true); // Mark handpose detection as started
+    const video = videoRef.current;
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    video.srcObject = stream;
+    video.play();
+    await loadHandposeModel();
   };
 
   return (
     <div style={{ display: 'flex' }}>
-      {/* Left Information Panel (only visible when showPanel is true) */}
       {showPanel && (
         <div style={{ width: '30%', padding: '20px', color: 'white', background: '#1a1a1a' }}>
           {selectedObject ? (
@@ -152,53 +209,69 @@ const Orrery = () => {
         </div>
       )}
 
-      {/* Orrery 3D View */}
       <div style={{ width: showPanel ? '70%' : '100%' }}>
         <Canvas
-          camera={{ position: [0, 100, 150], fov: 75 }}
+          camera={{ position: [0, 100, zoomLevel], fov: 75 }}
           style={{ background: 'black', height: '100vh' }}
         >
           <ambientLight intensity={0.5} />
-          <pointLight position={[0, 0, 0]} intensity={1} />
-
-          <Stars />
-
-          {/* Sun in the center */}
-          <Sun />
-
-          {/* Render orbits and dots for planets */}
-          {planets.map((planet) => (
-            <React.Fragment key={planet.name}>
-              <OrbitPath
-                distance={planet.distance}
-                onClick={() => handleObjectClick(planet)}
-              />
-              <Dot
-                {...planet}
-                onClick={() => handleObjectClick(planet)}
-              />
-            </React.Fragment>
-          ))}
-
-          {/* Render NEOs dynamically from API */}
-          {neoData.map((neo, idx) => (
-            <React.Fragment key={idx}>
-              <OrbitPath
-                distance={neo.distance}
-                onClick={() => handleObjectClick(neo)}
-              />
-              <Dot
-                {...neo}
-                onClick={() => handleObjectClick(neo)}
-              />
-            </React.Fragment>
-          ))}
-
+          <pointLight position={[10, 10, 10]} />
           <OrbitControls />
+          <Stars />
+          <Sun />
+          {planets.map((planet) => (
+            <group key={planet.name}>
+              <OrbitPath distance={planet.distance} />
+              <Dot
+                name={planet.name}
+                color={planet.color}
+                distance={planet.distance}
+                size={planet.size}
+                speed={planet.speed}
+                onClick={() => handleObjectClick(planet)}
+              />
+            </group>
+          ))}
+          {neoData.map((neo) => (
+            <group key={neo.name}>
+              <OrbitPath distance={neo.distance} />
+              <Dot
+                name={neo.name}
+                color={neo.color}
+                distance={neo.distance}
+                size={neo.size}
+                speed={neo.speed}
+                onClick={() => handleObjectClick(neo)}
+              />
+            </group>
+          ))}
+          <ZoomController zoomLevel={zoomLevel} />
         </Canvas>
+
+        <video ref={videoRef} style={{ display: 'none' }} />
+
+        {!handPoseDetectionStarted && (
+          <button
+            style={{
+              position: 'fixed',
+              bottom: '20px',
+              right: '20px',
+              padding: '10px 20px',
+              backgroundColor: '#007BFF',
+              color: 'white',
+              border: 'none',
+              borderRadius: '5px',
+              cursor: 'pointer',
+            }}
+            onClick={startHandposeDetection}
+          >
+            Start Handpose Detection
+          </button>
+        )}
       </div>
     </div>
   );
 };
 
 export default Orrery;
+4
