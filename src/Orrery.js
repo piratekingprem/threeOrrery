@@ -1,18 +1,27 @@
-import React, { useRef, useState, useEffect } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, Html } from '@react-three/drei';
-import * as THREE from 'three';
+// src/Orrery.js
+import React, { useEffect, useRef, useState } from "react";
+import { Canvas, useFrame } from "@react-three/fiber";
+import { OrbitControls, Html } from "@react-three/drei";
+import { Vector3 } from "three";
 import './Orrey.css';
+import * as THREE from 'three';
 
-// Utility to generate random stars in the background
+// Stars Component
 const Stars = () => {
   const group = useRef();
   const [positions] = useState(() => {
     const temp = [];
+
+    for (let i = 0; i < 1000; i++) {
+      const x = Math.random() * 2000 - 1000;
+      const y = Math.random() * 2000 - 1000;
+      const z = Math.random() * 2000 - 1000;
+
     for (let i = 0; i < 15000; i++) {
       const x = THREE.MathUtils.randFloatSpread(2000);
       const y = THREE.MathUtils.randFloatSpread(2000);
       const z = THREE.MathUtils.randFloatSpread(2000);
+
       temp.push([x, y, z]);
     }
     return temp;
@@ -30,12 +39,12 @@ const Stars = () => {
   );
 };
 
-// Orbit Path component to show circular paths around the Sun
+// OrbitPath Component to show circular paths around the Sun
 const OrbitPath = ({ distance, onClick }) => {
   const points = [];
   for (let i = 0; i < 64; i++) {
     const angle = (i / 64) * Math.PI * 2;
-    points.push(new THREE.Vector3(Math.cos(angle) * distance, 0, Math.sin(angle) * distance));
+    points.push(new Vector3(Math.cos(angle) * distance, 0, Math.sin(angle) * distance));
   }
   const lineGeometry = new THREE.BufferGeometry().setFromPoints(points);
 
@@ -100,12 +109,17 @@ const Orrery = () => {
     { name: 'Neptune', color: 'darkblue', distance: 30 * 10, size: 0.2, speed: 0.002 },
   ];
 
-  // Fetch NEO data from the NASA API
+  const handleObjectClick = (object) => {
+    setSelectedObject(object);
+    setShowPanel(true); // Show the information panel when a planet or NEO is clicked
+  };
+
   useEffect(() => {
-    const fetchNEOData = async () => {
+    const fetchNeoData = async () => {
+      const api_key = '8Cre6l1RZJ7lsmyab3tAtbDwPvCLiJVXidkjmXby#'
       try {
         const response = await fetch(
-          `https://api.nasa.gov/neo/rest/v1/feed?start_date=2024-09-22&end_date=2024-09-23&api_key=ew5wSSkycJDyRhyeznBX6JkaRTRWmImwioGODrTA`
+          `https://api.nasa.gov/neo/rest/v1/feed?start_date=2024-09-22&end_date=2024-09-23&api_key=${api_key}`
         );
         const data = await response.json();
         const neos = data.near_earth_objects['2024-09-22'];
@@ -126,13 +140,8 @@ const Orrery = () => {
       }
     };
 
-    fetchNEOData();
+    fetchNeoData();
   }, []);
-
-  const handleObjectClick = (object) => {
-    setSelectedObject(object);
-    setShowPanel(true); // Show the information panel when a planet or NEO is clicked
-  };
 
   return (
     <div style={{ display: 'flex' }}>
@@ -169,24 +178,25 @@ const Orrery = () => {
           {/* Render orbits and dots for planets */}
           {planets.map((planet) => (
             <React.Fragment key={planet.name}>
-              <OrbitPath
-                distance={planet.distance}
-                onClick={() => handleObjectClick(planet)}
-              />
-              <Dot
-                {...planet}
-                onClick={() => handleObjectClick(planet)}
-              />
+              <OrbitPath distance={planet.distance} onClick={() => handleObjectClick(planet)} />
+              <Dot {...planet} onClick={() => handleObjectClick(planet)} />
             </React.Fragment>
           ))}
 
           {/* Render NEOs without orbit paths */}
           {neoData.map((neo, idx) => (
+
+            <React.Fragment key={idx}>
+              <OrbitPath distance={neo.distance} onClick={() => handleObjectClick(neo)} />
+              <Dot {...neo} onClick={() => handleObjectClick(neo)} />
+            </React.Fragment>
+
             <Dot
               key={idx}
               {...neo}
               onClick={() => handleObjectClick(neo)}
             />
+
           ))}
 
           <OrbitControls />
@@ -196,4 +206,5 @@ const Orrery = () => {
   );
 };
 
+// Orrery Component
 export default Orrery;
