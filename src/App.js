@@ -1,14 +1,20 @@
 // src/App.js
 import React from 'react';
 import Orrery from './Orrery';
-
-
+import OnClickGetTheItem from './component/OnClickGetTheItem';
+import {BrowserRouter, Routes, Route}  from 'react-router-dom'
 
 function App() {
   return (
-    <div>
-      <Orrery/>
-    </div>
+      <BrowserRouter>
+        <Routes>
+          <Route path='/' element={<Orrery/>}/>
+          <Route path='/planet' element={<OnClickGetTheItem />}/>
+        </Routes>
+      </BrowserRouter>
+      
+      // <OnClickGetTheItem />
+    
   );
 }
 

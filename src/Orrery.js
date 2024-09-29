@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import * as handpose from '@tensorflow-models/handpose';
 import '@tensorflow/tfjs';
 import './Orrey.css';
+import { useNavigate } from 'react-router-dom';
 
 const Stars = () => {
   const group = useRef();
@@ -103,14 +104,14 @@ const Orrery = () => {
   let model = null;
 
   const planets = [
-    { name: 'Mercury', color: 'gray', distance: 20, size: 0.2, speed: 0.03 },
-    { name: 'Venus', color: 'yellow', distance: 30, size: 0.3, speed: 0.02 },
-    { name: 'Earth', color: 'blue', distance: 40, size: 0.35, speed: 0.01 },
-    { name: 'Mars', color: 'red', distance: 50, size: 0.25, speed: 0.008 },
-    { name: 'Jupiter', color: 'orange', distance: 70, size: 0.45, speed: 0.005 },
-    { name: 'Saturn', color: 'goldenrod', distance: 90, size: 0.4, speed: 0.004 },
-    { name: 'Uranus', color: 'lightblue', distance: 110, size: 0.35, speed: 0.003 },
-    { name: 'Neptune', color: 'darkblue', distance: 130, size: 0.35, speed: 0.002 },
+    { name: 'Mercury', color: 'gray', distance: 20, size: 1, speed: 0.03 },
+    { name: 'Venus', color: 'yellow', distance: 30, size: 1, speed: 0.02 },
+    { name: 'Earth', color: 'blue', distance: 40, size: 1, speed: 0.01 },
+    { name: 'Mars', color: 'red', distance: 50, size: 1, speed: 0.008 },
+    { name: 'Jupiter', color: 'orange', distance: 70, size: 1, speed: 0.005 },
+    { name: 'Saturn', color: 'goldenrod', distance: 90, size: 1, speed: 0.004 },
+    { name: 'Uranus', color: 'lightblue', distance: 110, size: 1, speed: 0.003 },
+    { name: 'Neptune', color: 'darkblue', distance: 130, size: 1, speed: 0.002 },
   ];
 
   // Fetch NEO data from the NASA API
@@ -143,8 +144,10 @@ const Orrery = () => {
   }, []);
 
   const handleObjectClick = (object) => {
+    
     setSelectedObject(object);
     setShowPanel(true);
+    navigate('/planet')
   };
 
   // Load Handpose Model and Setup Camera for Hand Tracking
@@ -191,7 +194,7 @@ const Orrery = () => {
     video.play();
     await loadHandposeModel();
   };
-
+  let navigate = useNavigate();
   return (
     <div style={{ display: 'flex' }}>
       {showPanel && (
@@ -274,4 +277,3 @@ const Orrery = () => {
 };
 
 export default Orrery;
-4
